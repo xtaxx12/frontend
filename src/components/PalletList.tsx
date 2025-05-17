@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
+import { PalletDetail } from './PalletDetail'; // Asegúrate de que la ruta sea correcta
 
 interface Pallet {
   id: number;
@@ -13,6 +14,7 @@ export const PalletList = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [editing, setEditing] = useState<Pallet | null>(null);
+  const [selectedPallet, setSelectedPallet] = useState<Pallet | null>(null);
 
   const fetchPallets = async () => {
     try {
@@ -65,7 +67,6 @@ export const PalletList = () => {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         setPallets(prev => prev.filter(p => p.id !== id));
-
         Swal.fire('Eliminado', 'El pallet ha sido eliminado.', 'success');
       } catch (err) {
         Swal.fire('Error', 'No se pudo eliminar el pallet.', 'error');
@@ -99,6 +100,10 @@ export const PalletList = () => {
     }
   };
 
+  const handleRowClick = (pallet: Pallet) => {
+    setSelectedPallet(pallet);
+  };
+
   useEffect(() => {
     fetchPallets();
   }, []);
@@ -123,7 +128,11 @@ export const PalletList = () => {
           </thead>
           <tbody>
             {pallets.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
+              <tr
+                key={p.id}
+                className="hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleRowClick(p)}
+              >
                 <td className="px-6 py-3 border-b">{p.id}</td>
                 <td className="px-6 py-3 border-b">{p.fecha}</td>
                 <td className={`px-6 py-3 border-b font-semibold ${p.estado === 'POR_RECIBIR' ? 'text-yellow-600' : 'text-green-600'}`}>
@@ -133,20 +142,29 @@ export const PalletList = () => {
                 <td className="px-6 py-3 text-center border-b space-x-2">
                   {p.estado === 'POR_RECIBIR' && (
                     <button
-                      onClick={() => updatePalletStatus(p.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updatePalletStatus(p.id);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
                     >
                       Recibir
                     </button>
                   )}
                   <button
-                    onClick={() => handleEdit(p)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(p);
+                    }}
                     className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                   >
                     Editar
                   </button>
                   <button
-                    onClick={() => handleDelete(p.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(p.id);
+                    }}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                   >
                     Eliminar
@@ -158,32 +176,86 @@ export const PalletList = () => {
         </table>
       </div>
 
+      {/* Modal de Edición */}
       {editing && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
             <h3 className="text-xl font-bold mb-4">Editar Pallet ID {editing.id}</h3>
 
-            <div className="mb-3">
-              <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha
-              </label>
-              <input
-                id="fecha"
-                type="date"
-                value={editing.fecha}
-                onChange={(e) => setEditing({ ...editing, fecha: e.target.value })}
-                className="w-full border p-2 rounded"
-              />
-            </div>
-            <input
-              type="text"
-              value={editing.origen}
-              onChange={(e) => setEditing({ ...editing, origen: e.target.value })}
-              className="w-full border p-2 rounded mb-3"
-              placeholder="Origen"
-            />
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
+                  Fecha
+                </label>
+                <input
+                  id="fecha"
+                  type="date"
+                  value={editing.fecha}
+                  onChange={(e) => setEditing({ ...editing, fecha: e.target.value })}
+                  className="w-full border p-2 rounded"
+                />
+              </div>
 
-            <div className="flex justify-end space-x-2">
+              <div>
+                <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
+                  Estado
+                </label>
+                <select
+                  id="estado"
+                  value={editing.estado}
+                  onChange={(e) => setEditing({ ...editing, estado: e.target.value })}
+                  className="w-full border p-2 rounded bg-white"
+                >
+                  <option value="POR_RECIBIR">Por recibir</option>
+                  <option value="RECIBIDO">Recibido</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="origen" className="block text-sm font-medium text-gray-700 mb-1">
+                  Origen
+                </label>
+                <input
+                  id="origen"
+                  type="text"
+                  value={editing.origen}
+                  onChange={(e) => setEditing({ ...editing, origen: e.target.value })}
+                  className="w-full border p-2 rounded"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="desde_empresa" className="block text-sm font-medium text-gray-700 mb-1">
+                  Empresa de Origen
+                </label>
+                <input
+                  id="desde_empresa"
+                  type="text"
+                  value={(editing as any).desde_empresa || ''}
+                  onChange={(e) =>
+                    setEditing((prev) => ({ ...(prev as any), desde_empresa: e.target.value }))
+                  }
+                  className="w-full border p-2 rounded"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="hacia_empresa" className="block text-sm font-medium text-gray-700 mb-1">
+                  Empresa Destino
+                </label>
+                <input
+                  id="hacia_empresa"
+                  type="text"
+                  value={(editing as any).hacia_empresa || ''}
+                  onChange={(e) =>
+                    setEditing((prev) => ({ ...(prev as any), hacia_empresa: e.target.value }))
+                  }
+                  className="w-full border p-2 rounded"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
               <button
                 onClick={() => setEditing(null)}
                 className="px-4 py-2 bg-gray-400 text-white rounded"
@@ -199,6 +271,14 @@ export const PalletList = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Detalle */}
+      {selectedPallet && (
+        <PalletDetail
+          pallet={selectedPallet}
+          onClose={() => setSelectedPallet(null)}
+        />
       )}
     </div>
   );
